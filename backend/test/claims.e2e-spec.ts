@@ -10,34 +10,34 @@ import { sha256 } from '../src/common/hash';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 // Real HTTP stack, real Postgres (the _test database), real AssessmentService.
-// Only the Anthropic client is faked, so no API key or network is needed.
+// Only the model client is faked, so no API key or network is needed.
 
-const EVIDENCE = `Results: 412 participants completed monitoring (median age 64 years, range 22–84).
-For detection of any AF episode of 30 seconds or longer, the patch algorithm achieved a
-sensitivity of 96.4% (95% CI 91.8–98.8%). For AF episodes lasting 6 minutes or longer,
-sensitivity was 98.2%.`;
+const EVIDENCE = `Results: total playback time with the case was 32.4 hours with noise cancelling off
+and 24.1 hours with noise cancelling on. After a 10-minute charge from empty, the earbuds
+played for 3.1 hours. The earbuds are rated IPX4 (resistant to splashing water).`;
 
 const CLAIM = {
-  productRef: 'VT-AF1',
-  claimText: 'The AF-1 patch detects atrial fibrillation with 98% sensitivity in adults over 18.',
+  productRef: 'TS-T2',
+  claimText: 'The T2 earbuds give 32 hours of listening with noise cancelling on, and they are waterproof.',
   market: 'US',
   evidenceText: EVIDENCE,
 };
 
 const ASSERTIONS: ModelAssessment['assertions'] = [
   {
-    text: 'Detects AF with 98% sensitivity',
+    text: 'Gives 32 hours of listening with noise cancelling on',
     verdict: 'PARTIAL',
     confidence: 80,
-    rationale: '98.2% applies only to episodes of 6 minutes or longer.',
-    quotedExcerpt: 'For AF episodes lasting 6 minutes or longer, sensitivity was 98.2%.',
+    rationale: '32.4 hours applies only with noise cancelling off; with it on the figure is 24.1 hours.',
+    quotedExcerpt:
+      'total playback time with the case was 32.4 hours with noise cancelling off and 24.1 hours with noise cancelling on.',
   },
   {
-    text: 'Applies to adults over 18',
+    text: 'The earbuds are waterproof',
     verdict: 'SUPPORTED',
     confidence: 70,
-    rationale: 'The study enrolled adults.',
-    quotedExcerpt: 'enrolled adults over 18', // fabricated: not in the evidence
+    rationale: 'The report rates the earbuds as water resistant.',
+    quotedExcerpt: 'The earbuds are fully waterproof', // fabricated: not in the evidence
   },
 ];
 
@@ -57,12 +57,12 @@ function modelReply(text: string) {
 describe('Claims API (e2e)', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
-  const anthropicCreate = jest.fn();
+  const modelCreate = jest.fn();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(ANTHROPIC_CLIENT)
-      .useValue({ messages: { create: anthropicCreate } })
+      .useValue({ messages: { create: modelCreate } })
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
     configureApp(app);
@@ -72,8 +72,8 @@ describe('Claims API (e2e)', () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "Claim" CASCADE');
-    anthropicCreate.mockReset();
-    anthropicCreate.mockResolvedValue(modelReply(JSON.stringify({ assertions: ASSERTIONS })));
+    modelCreate.mockReset();
+    modelCreate.mockResolvedValue(modelReply(JSON.stringify({ assertions: ASSERTIONS })));
   });
 
   afterAll(async () => {
@@ -98,7 +98,7 @@ describe('Claims API (e2e)', () => {
     it('rejects missing, blank and unknown fields with 400', async () => {
       const res = await http()
         .post('/api/claims')
-        .send({ productRef: 'VT-AF1', claimText: '   ', market: 'US', status: 'APPROVED' })
+        .send({ productRef: 'TS-T2', claimText: '   ', market: 'US', status: 'APPROVED' })
         .expect(400);
 
       expect(res.body.message).toEqual(
@@ -121,7 +121,7 @@ describe('Claims API (e2e)', () => {
   describe('GET /api/claims', () => {
     it('lists claims newest first, without evidence text', async () => {
       const first = await createClaim();
-      const second = await createClaim({ ...CLAIM, productRef: 'VT-AF2' });
+      const second = await createClaim({ ...CLAIM, productRef: 'TS-T3' });
 
       const res = await http().get('/api/claims').expect(200);
 
@@ -154,7 +154,7 @@ describe('Claims API (e2e)', () => {
       const [run] = res.body.runs;
       expect(run).toMatchObject({
         modelId: ASSESSMENT_MODEL_CONFIG.modelId,
-        promptVersion: 'v2.0.0',
+        promptVersion: 'v2.1.0',
         overallVerdict: 'NOT_SUBSTANTIATED',
         inputTokens: 900,
         outputTokens: 250,
@@ -165,7 +165,7 @@ describe('Claims API (e2e)', () => {
           expect.objectContaining({
             verdict: 'PARTIAL',
             quoteVerified: true,
-            matchedAt: EVIDENCE.indexOf('For AF episodes lasting'),
+            matchedAt: EVIDENCE.indexOf('total playback time'),
             // Source wraps a line mid-quote; the span still covers exactly the passage.
             matchedLength: ASSERTIONS[0].quotedExcerpt.length,
           }),
@@ -179,11 +179,11 @@ describe('Claims API (e2e)', () => {
         ]),
       );
       // The whole evidence text was sent to the model.
-      expect(anthropicCreate.mock.calls[0][0].messages[0].content).toContain(EVIDENCE);
+      expect(modelCreate.mock.calls[0][0].messages[0].content).toContain(EVIDENCE);
     });
 
     it('returns 502 and changes nothing when the model output fails the schema', async () => {
-      anthropicCreate.mockResolvedValue(modelReply('Sure! The claim looks fine.'));
+      modelCreate.mockResolvedValue(modelReply('Sure! The claim looks fine.'));
       const claim = await createClaim();
 
       const res = await http().post(`/api/claims/${claim.id}/assess`).expect(502);
@@ -195,12 +195,12 @@ describe('Claims API (e2e)', () => {
 
     it('returns 404 for an unknown claim without calling the model', async () => {
       await http().post('/api/claims/00000000-0000-4000-8000-000000000099/assess').expect(404);
-      expect(anthropicCreate).not.toHaveBeenCalled();
+      expect(modelCreate).not.toHaveBeenCalled();
     });
   });
 
   describe('POST /api/claims/:id/decision', () => {
-    const decision = { outcome: 'APPROVED', justification: 'Reviewed against study VT-AF1-DX-01.' };
+    const decision = { outcome: 'APPROVED', justification: 'Reviewed against test report TR-2291.' };
 
     it('returns 409 when the claim has never been assessed — the governance gate', async () => {
       const claim = await createClaim();
@@ -232,7 +232,7 @@ describe('Claims API (e2e)', () => {
       await http().post(`/api/claims/${claim.id}/assess`).expect(200);
       await http()
         .post(`/api/claims/${claim.id}/decision`)
-        .send({ outcome: 'SENT_BACK', justification: 'Headline figure is subgroup-only.' })
+        .send({ outcome: 'SENT_BACK', justification: 'Battery figure only holds with noise cancelling off.' })
         .expect(200);
 
       const res = await http().post(`/api/claims/${claim.id}/assess`).expect(200);

@@ -1,14 +1,14 @@
 import { verifyQuote } from './quote-verifier';
 
-// Reads like a real study: line wraps, en dashes, smart quotes.
-const SOURCE = `Results: 412 participants completed monitoring (median age 64 years, range 22–84; 47% female).
-For detection of any AF episode of 30 seconds or longer, the patch algorithm
-achieved a sensitivity of 96.4% (95% CI 91.8–98.8%). Participants described the patch as “comfortable” and ‘easy to forget’.
-Adherence was 45% in the first week.`;
+// Reads like a real test report: line wraps, en dashes, smart quotes.
+const SOURCE = `Results: six production units completed the battery test (firmware 1.4.2, volume 40–60%).
+With noise cancelling off and the charging case included, the earbuds
+reached a charging efficiency of 96.4% (range 91.8–98.8%). Testers described the fit as “comfortable” and ‘easy to forget’.
+Standby drain was 45% lower in the first week.`;
 
 describe('verifyQuote', () => {
   it('verifies an exact quote and returns its index in the original text', () => {
-    const quote = 'Adherence was 45% in the first week.';
+    const quote = 'Standby drain was 45% lower in the first week.';
     const result = verifyQuote(quote, SOURCE);
 
     expect(result.verified).toBe(true);
@@ -17,48 +17,48 @@ describe('verifyQuote', () => {
   });
 
   it('verifies a quote whose whitespace was reformatted (line breaks, double spaces)', () => {
-    const quote = 'the patch   algorithm achieved a sensitivity\tof 96.4%';
+    const quote = 'the earbuds   reached a charging\tefficiency of 96.4%';
     const result = verifyQuote(quote, SOURCE);
 
     expect(result.verified).toBe(true);
-    // Source wraps after "algorithm"; the index still points at the real passage.
-    expect(result.matchedAt).toBe(SOURCE.indexOf('the patch algorithm'));
+    // Source wraps after "earbuds"; the index still points at the real passage.
+    expect(result.matchedAt).toBe(SOURCE.indexOf('the earbuds\nreached'));
     // The highlighted span is the source's own text, line break included.
-    expect(highlight(SOURCE, result)).toBe('the patch algorithm\nachieved a sensitivity of 96.4%');
-    expect(result.normalizedQuote).toBe('the patch algorithm achieved a sensitivity of 96.4%');
+    expect(highlight(SOURCE, result)).toBe('the earbuds\nreached a charging efficiency of 96.4%');
+    expect(result.normalizedQuote).toBe('the earbuds reached a charging efficiency of 96.4%');
   });
 
   it('verifies straight quotes against smart quotes in the source', () => {
-    const result = verifyQuote(`described the patch as "comfortable" and 'easy to forget'`, SOURCE);
+    const result = verifyQuote(`described the fit as "comfortable" and 'easy to forget'`, SOURCE);
 
     expect(result.verified).toBe(true);
-    expect(highlight(SOURCE, result)).toBe('described the patch as “comfortable” and ‘easy to forget’');
+    expect(highlight(SOURCE, result)).toBe('described the fit as “comfortable” and ‘easy to forget’');
   });
 
   it('verifies smart quotes in the quote against straight quotes in the source', () => {
-    const source = 'Patients called it "comfortable" overall.';
+    const source = 'Reviewers called it "comfortable" overall.';
     expect(verifyQuote('called it “comfortable”', source).verified).toBe(true);
   });
 
   it('treats en/em dashes and ASCII hyphens as equivalent', () => {
-    const result = verifyQuote('95% CI 91.8-98.8%', SOURCE);
+    const result = verifyQuote('range 91.8-98.8%', SOURCE);
 
     expect(result.verified).toBe(true);
-    expect(result.matchedAt).toBe(SOURCE.indexOf('95% CI'));
+    expect(result.matchedAt).toBe(SOURCE.indexOf('range 91.8'));
   });
 
   it('is case-insensitive', () => {
-    expect(verifyQuote('ADHERENCE WAS 45%', SOURCE).verified).toBe(true);
+    expect(verifyQuote('STANDBY DRAIN WAS 45%', SOURCE).verified).toBe(true);
   });
 
   it('rejects a quote that is genuinely absent', () => {
-    const result = verifyQuote('the device was cleared by the FDA for home use', SOURCE);
+    const result = verifyQuote('the earbuds are waterproof to 10 metres', SOURCE);
 
     expect(result).toEqual({
       verified: false,
       matchedAt: null,
       matchedLength: null,
-      normalizedQuote: 'the device was cleared by the fda for home use',
+      normalizedQuote: 'the earbuds are waterproof to 10 metres',
     });
   });
 
@@ -75,7 +75,7 @@ describe('verifyQuote', () => {
   });
 
   it('rejects a near-miss where the number differs (45% vs 54%)', () => {
-    const result = verifyQuote('Adherence was 54% in the first week.', SOURCE);
+    const result = verifyQuote('Standby drain was 54% lower in the first week.', SOURCE);
 
     expect(result.verified).toBe(false);
     expect(result.matchedAt).toBeNull();
@@ -84,23 +84,23 @@ describe('verifyQuote', () => {
 
   describe('number boundaries', () => {
     it('rejects a quote that starts mid-number ("6.4%" inside "96.4%")', () => {
-      expect(verifyQuote('6.4% (95% CI', SOURCE).verified).toBe(false);
+      expect(verifyQuote('6.4% (range', SOURCE).verified).toBe(false);
     });
 
     it('rejects a quote that starts after a decimal point ("4%" inside "96.4%")', () => {
-      expect(verifyQuote('4% (95% CI', SOURCE).verified).toBe(false);
+      expect(verifyQuote('4% (range', SOURCE).verified).toBe(false);
     });
 
     it('rejects a quote that truncates a decimal ("96" from "96.4%")', () => {
-      expect(verifyQuote('a sensitivity of 96', SOURCE).verified).toBe(false);
+      expect(verifyQuote('a charging efficiency of 96', SOURCE).verified).toBe(false);
     });
 
     it('rejects a quote that starts mid-word', () => {
-      expect(verifyQuote('nsitivity of 96.4%', SOURCE).verified).toBe(false);
+      expect(verifyQuote('harging efficiency of 96.4%', SOURCE).verified).toBe(false);
     });
 
     it('skips a mid-number occurrence and finds a later clean one', () => {
-      const source = 'Overall 96.4% sensitivity; in women, 6.4% missed.';
+      const source = 'Overall 96.4% efficiency; at 5 °C, 6.4% lower.';
       const result = verifyQuote('6.4%', source);
 
       expect(result.verified).toBe(true);
@@ -110,21 +110,21 @@ describe('verifyQuote', () => {
   });
 
   it('returns an index that highlights the real passage despite leading whitespace and wraps', () => {
-    const source = '\n\n   Primary endpoint:\n   sensitivity   of\n96.4%   was met.';
-    const result = verifyQuote('Sensitivity of 96.4% was met', source);
+    const source = '\n\n   Primary result:\n   efficiency   of\n96.4%   was met.';
+    const result = verifyQuote('Efficiency of 96.4% was met', source);
 
     expect(result.verified).toBe(true);
     // Span covers the source's own spacing and ends exactly at "met" — no trailing whitespace.
-    expect(highlight(source, result)).toBe('sensitivity   of\n96.4%   was met');
+    expect(highlight(source, result)).toBe('efficiency   of\n96.4%   was met');
   });
 
   it('includes the whole final character when it is outside the BMP (two code units)', () => {
     // U+1D6FC MATHEMATICAL ITALIC SMALL ALPHA, as it appears in some typeset PDFs.
-    const source = 'Internal consistency was high (Cronbach 𝛼) across sites.';
-    const result = verifyQuote('consistency was high (Cronbach 𝛼', source);
+    const source = 'Listener agreement was high (Cronbach 𝛼) across sessions.';
+    const result = verifyQuote('agreement was high (Cronbach 𝛼', source);
 
     expect(result.verified).toBe(true);
-    expect(highlight(source, result)).toBe('consistency was high (Cronbach 𝛼');
+    expect(highlight(source, result)).toBe('agreement was high (Cronbach 𝛼');
   });
 });
 

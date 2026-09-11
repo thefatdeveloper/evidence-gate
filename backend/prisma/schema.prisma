@@ -16,7 +16,7 @@ model Claim {
   market       String
   status       String          @default("DRAFTED")
   // DRAFTED | ASSESSED | APPROVED | SENT_BACK
-  evidenceText String // the clinical study text
+  evidenceText String // the source document text, e.g. a test report
   evidenceHash String // sha256 of evidenceText at assessment time
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt

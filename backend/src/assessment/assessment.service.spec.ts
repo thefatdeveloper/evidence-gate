@@ -5,32 +5,31 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ModelAssessment } from './assessment.schema';
 import { AssessmentResponseError, AssessmentService } from './assessment.service';
 
-// No network and no API key: the Anthropic client and Prisma are both fakes.
+// No network and no API key: the model client and Prisma are both fakes.
 
 const CLAIM_ID = '00000000-0000-4000-8000-000000000001';
 const MODEL_ID = 'claude-haiku-4-5-20251001';
-const CLAIM_TEXT = 'The AF-1 patch detects atrial fibrillation with 98% sensitivity in adults over 18.';
-const EVIDENCE = `Results: 412 participants completed monitoring (median age 64 years, range 22–84).
-For detection of any AF episode of 30 seconds or longer, the patch algorithm achieved a
-sensitivity of 96.4% (95% CI 91.8–98.8%). For AF episodes lasting 6 minutes or longer,
-sensitivity was 98.2%.`;
+const CLAIM_TEXT = 'The T2 earbuds give 32 hours of listening with noise cancelling on and are waterproof.';
+const EVIDENCE = `Results: total playback time with the case was 32.4 hours with noise cancelling (ANC) off
+and 24.1 hours with ANC on. After a 10-minute charge from empty, the earbuds played for
+3.1 hours. The earbuds are rated IPX4 (resistant to splashing water).`;
 
 const GOOD_OUTPUT: ModelAssessment = {
   assertions: [
     {
-      text: 'Detects AF with 98% sensitivity',
+      text: 'Gives 32 hours of listening with noise cancelling on',
       verdict: 'PARTIAL',
       confidence: 80,
-      rationale: '98.2% applies only to episodes of 6 minutes or longer.',
-      quotedExcerpt: 'For AF episodes lasting 6 minutes or longer, sensitivity was 98.2%.',
+      rationale: '32.4 hours applies only with ANC off; with ANC on it is 24.1 hours.',
+      quotedExcerpt: 'total playback time with the case was 32.4 hours with noise cancelling (ANC) off',
     },
     {
-      text: 'Applies to adults over 18',
+      text: 'The earbuds are waterproof',
       verdict: 'SUPPORTED',
       confidence: 70,
-      rationale: 'The study enrolled adults.',
-      // Fabricated: the evidence says "range 22–84", never "adults over 18".
-      quotedExcerpt: 'enrolled adults over 18',
+      rationale: 'The report rates the earbuds as water resistant.',
+      // Fabricated: the evidence says IPX4, splash resistant, never "fully waterproof".
+      quotedExcerpt: 'The earbuds are fully waterproof to 1 metre',
     },
   ],
 };
@@ -73,9 +72,9 @@ function setup(options: { response?: Anthropic.Message; storedHash?: string | nu
     $transaction: jest.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
   };
   const messagesCreate = jest.fn().mockResolvedValue(options.response ?? message());
-  const anthropic = { messages: { create: messagesCreate } } as unknown as Anthropic;
+  const modelClient = { messages: { create: messagesCreate } } as unknown as Anthropic;
 
-  const service = new AssessmentService(anthropic, prisma as unknown as PrismaService);
+  const service = new AssessmentService(modelClient, prisma as unknown as PrismaService);
   return { service, messagesCreate, prisma, create, findUnique, updateClaim };
 }
 
@@ -102,7 +101,7 @@ describe('AssessmentService.assess', () => {
       ['PARTIAL', true],
       ['UNSUPPORTED', false],
     ]);
-    expect(run.assertions[0].matchedAt).toBe(EVIDENCE.indexOf('For AF episodes lasting'));
+    expect(run.assertions[0].matchedAt).toBe(EVIDENCE.indexOf('total playback time'));
     expect(run.assertions[1].matchedAt).toBeNull();
     expect(run.overallVerdict).toBe('NOT_SUBSTANTIATED');
   });
@@ -118,7 +117,7 @@ describe('AssessmentService.assess', () => {
     expect(data).toMatchObject({
       claimId: CLAIM_ID,
       modelId: MODEL_ID,
-      promptVersion: 'v2.0.0',
+      promptVersion: 'v2.1.0',
       temperature: 0,
       maxTokens: 4096,
       inputTokens: 1234,

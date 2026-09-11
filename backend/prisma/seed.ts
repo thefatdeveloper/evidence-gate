@@ -10,23 +10,25 @@ const prisma = new PrismaClient({
 // Fixed id so re-running the seed updates this row instead of duplicating it.
 const SEED_CLAIM_ID = '00000000-0000-4000-8000-000000000001';
 
-// Fictional device and study. The claim deliberately overstates the evidence
-// (headline sensitivity comes from a subgroup, age range is narrower than
-// claimed) so a real assessment has something to catch.
+// Fictional product and test report (same as web/src/example.ts). The claim
+// deliberately overstates the evidence: 32 hours is the noise-cancelling-off
+// figure, and IPX4 means splash resistant, not waterproof.
 const claimText =
-  'The VitaTrace AF-1 wearable ECG patch detects atrial fibrillation with 98% sensitivity, clinically proven in adults over 18.';
+  'The Tessel T2 wireless earbuds give you 32 hours of listening with noise cancelling on, a 10-minute charge gives 3 hours of playback, and they are waterproof.';
 
-const evidenceText = `Title: Diagnostic accuracy of a 14-day single-lead wearable ECG patch for atrial fibrillation detection: a prospective multicenter study (VT-AF1-DX-01)
+const evidenceText = `Title: Independent battery and durability test report, Tessel T2 wireless earbuds (report TR-2291)
 
-Methods: Adults referred for ambulatory rhythm monitoring at three US cardiology centers were enrolled between March 2024 and January 2025. Participants wore the VitaTrace AF-1 patch and a reference 12-lead Holter monitor concurrently for up to 14 days. Holter recordings were adjudicated by two board-certified cardiologists blinded to patch output; disagreements were resolved by a third reader. Atrial fibrillation (AF) was defined as an irregular rhythm without discernible P waves lasting at least 30 seconds. Patients with implanted pacemakers or defibrillators were excluded.
+Method: Six production units were tested at an independent audio lab between April and June 2025. Playback used the same music playlist at 50% volume over Bluetooth from one phone. Each result is the median of the six units. Battery life was measured from full charge to shutdown, including recharges from the fully charged case.
 
-Results: 412 participants completed monitoring (median age 64 years, range 22-84; 47% female). The reference standard identified AF in 139 participants. For detection of any AF episode of 30 seconds or longer, the patch algorithm achieved a sensitivity of 96.4% (95% CI 91.8-98.8%) and a specificity of 98.7% (95% CI 96.6-99.6%). For AF episodes lasting 6 minutes or longer (n=112), sensitivity was 98.2% (95% CI 93.7-99.8%). Median wear time was 13.1 days; 4.6% of recorded time was classified as unanalyzable due to signal noise.
+Results: Total playback time with the charging case was 32.4 hours with active noise cancelling (ANC) off and 24.1 hours with ANC on. The earbuds alone lasted 8.1 hours with ANC off and 6.0 hours with ANC on. After a 10-minute charge from empty, the earbuds played for 3.1 hours with ANC off. A full charge of the case took 1 hour 52 minutes over USB-C.
 
-Limitations: The study population was drawn from patients already referred for rhythm monitoring and may not represent screening of the general population. No participants under 22 years of age were enrolled.`;
+Durability: The earbuds are rated IPX4 (resistant to splashing water). They were not tested for immersion, and the charging case has no water-resistance rating.
+
+Limitations: Battery life at higher volume, or during calls rather than music, will be lower. Results apply to firmware 1.4.2 only.`;
 
 async function main() {
   const data = {
-    productRef: 'VT-AF1',
+    productRef: 'TS-T2',
     claimText,
     market: 'US',
     evidenceText,

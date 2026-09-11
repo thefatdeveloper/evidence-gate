@@ -2,15 +2,15 @@ import { applyQuoteVerification, deriveOverallVerdict } from './assessment.logic
 import { ModelAssertion } from './assessment.schema';
 
 const EVIDENCE =
-  'For detection of any AF episode of 30 seconds or longer, the patch algorithm achieved a sensitivity of 96.4% (95% CI 91.8–98.8%).';
+  'With noise cancelling off and the case included, total playback time was 32.4 hours (range 30.9–33.6 hours).';
 
 function assertion(overrides: Partial<ModelAssertion>): ModelAssertion {
   return {
-    text: 'Detects AF with 96.4% sensitivity',
+    text: 'Lasts 32.4 hours with the case',
     verdict: 'SUPPORTED',
     confidence: 90,
-    rationale: 'The study reports this figure directly.',
-    quotedExcerpt: 'achieved a sensitivity of 96.4%',
+    rationale: 'The report states this figure directly.',
+    quotedExcerpt: 'total playback time was 32.4 hours',
     ...overrides,
   };
 }
@@ -21,8 +21,8 @@ describe('applyQuoteVerification', () => {
 
     expect(result.verdict).toBe('SUPPORTED');
     expect(result.quoteVerified).toBe(true);
-    expect(result.matchedAt).toBe(EVIDENCE.indexOf('achieved a sensitivity'));
-    expect(result.matchedLength).toBe('achieved a sensitivity of 96.4%'.length);
+    expect(result.matchedAt).toBe(EVIDENCE.indexOf('total playback time'));
+    expect(result.matchedLength).toBe('total playback time was 32.4 hours'.length);
   });
 
   it('keeps a PARTIAL verdict when its quote is verified', () => {
@@ -32,7 +32,7 @@ describe('applyQuoteVerification', () => {
 
   it('forces UNSUPPORTED when the quote is fabricated, even at confidence 100', () => {
     const [result] = applyQuoteVerification(
-      [assertion({ quotedExcerpt: 'achieved a sensitivity of 98%', confidence: 100 })],
+      [assertion({ quotedExcerpt: 'total playback time was 40 hours', confidence: 100 })],
       EVIDENCE,
     );
 
@@ -52,7 +52,7 @@ describe('applyQuoteVerification', () => {
 
   it('verifies each assertion independently', () => {
     const results = applyQuoteVerification(
-      [assertion({}), assertion({ quotedExcerpt: 'cleared by the FDA' })],
+      [assertion({}), assertion({ quotedExcerpt: 'certified waterproof' })],
       EVIDENCE,
     );
     expect(results.map((r) => r.verdict)).toEqual(['SUPPORTED', 'UNSUPPORTED']);

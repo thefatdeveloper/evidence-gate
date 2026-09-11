@@ -85,8 +85,8 @@ export function App() {
         <div>
           <h1>Evidence Gate</h1>
           <p>
-            Checks a medical-device marketing claim against its clinical evidence. Every quote the
-            model cites is verified against the source before a person signs off.
+            Checks a product marketing claim against the evidence behind it. Every quote the model
+            cites is verified against the source before a person signs off.
           </p>
         </div>
         {claim && <span className="status">{LABEL[claim.status]}</span>}
@@ -97,7 +97,7 @@ export function App() {
         <form className="input-grid" onSubmit={handleAssess}>
           <label>
             Product reference
-            <input value={form.productRef} onChange={update('productRef')} placeholder="VT-AF1" />
+            <input value={form.productRef} onChange={update('productRef')} placeholder="TS-T2" />
           </label>
           <label>
             Market
@@ -109,7 +109,7 @@ export function App() {
           </label>
           <label className="span-2">
             <span>
-              Evidence text <span className="hint">— the clinical study, sent to the model in full</span>
+              Evidence text <span className="hint">— e.g. an independent test report, sent to the model in full</span>
             </span>
             <textarea rows={9} value={form.evidenceText} onChange={update('evidenceText')} />
           </label>

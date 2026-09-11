@@ -1,10 +1,12 @@
 # Evidence Gate
 
-Checks a medical-device marketing claim against its clinical evidence, verifies every quote the model cites against the source text, and puts human sign-off behind a governance gate.
+Checks a product marketing claim against the evidence behind it, verifies every quote the model cites against the source text, and puts human sign-off behind a governance gate.
 
-![Screenshot: an assessed claim with one assertion flagged "Quote not found in source"](docs/screenshot.png)
-
-<!-- Placeholder: assess the example claim, capture the results section, and save it as docs/screenshot.png -->
+<!--
+  Screenshot placeholder. Assess the example claim, save the results view as
+  docs/screenshot.png, then replace this comment with:
+  ![Evidence Gate: an assessed claim with one assertion flagged "Quote not found in source"](docs/screenshot.png)
+-->
 
 ## What it does
 
@@ -32,7 +34,7 @@ pnpm dev:backend   # API on http://localhost:3000
 pnpm dev:web       # UI on http://localhost:5173
 ```
 
-Open http://localhost:5173, click **Load example**, then **Assess**.
+Open http://localhost:5173, click **Load example**, then **Assess**. The example is a fictional pair of wireless earbuds whose advertised battery life and water resistance go further than their test report supports.
 
 ### Tests
 
@@ -55,6 +57,6 @@ Retrieval, asynchronous processing and object storage are designed but not built
 
 ## What I would do next
 
-- **Retrieval at scale.** Split long studies into chunks and retrieve the most relevant passages for each assertion, with one model call per assertion as in the design. Quotes would still be verified against the full extracted text, not just the retrieved chunks.
+- **Retrieval at scale.** Split long documents into chunks and retrieve the most relevant passages for each assertion, with one model call per assertion as in the design. Quotes would still be verified against the full extracted text, not just the retrieved chunks.
 - **Async processing with an outbox.** Return `202 Accepted` from assess and write the job to an outbox table in the same transaction as the claim change. A publisher moves outbox rows to a queue, workers retry with backoff, and repeated failures land in a dead-letter queue while the UI polls for the result. No job is lost or run twice because the API crashed between the database write and the enqueue.
-- **PDF ingestion.** Upload studies to object storage through presigned URLs, extract text with a page map so every verified quote can be cited by page, and hash the original file as well as the extracted text, so an approver can open the source PDF at the cited page before signing.
+- **PDF ingestion.** Upload evidence documents to object storage through presigned URLs, extract text with a page map so every verified quote can be cited by page, and hash the original file as well as the extracted text, so an approver can open the source PDF at the cited page before signing.
