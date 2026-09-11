@@ -77,15 +77,11 @@ Settings live in `backend/.env`, copied from `backend/.env.example`:
 
 [`docs/queries.sql`](docs/queries.sql) holds read-only queries for each feature: claims, run provenance, the latest run's assertions with the exact passage each quote matched, where the pipeline overrode the model, decisions, evidence integrity and spend. Its invariant section must return zero rows; a row there means an audit record is inconsistent. Run the whole file with the command above, or paste single queries into psql or pgAdmin.
 
-## Production design
-
-![High-level design](HLD.drawio.png)
-
-The end-to-end request flow is in [SEQUENCE.md](SEQUENCE.md).
+## Scope
 
 The running code implements the core assessment loop: claim intake, splitting a claim into assertions, per-assertion verdicts with quote verification, the derived overall verdict, run provenance, and the human decision gate with its `409`.
 
-Retrieval, asynchronous processing and object storage are designed but not built. This proof of concept sends the whole evidence text to the model in one synchronous request and stores evidence as text in PostgreSQL. Sign-in and roles, per-market decisions, claim versioning and the audit log shown in the design are also not built yet.
+Retrieval, asynchronous processing and object storage are deliberately out of scope. This proof of concept sends the whole evidence text to the model in one synchronous request and stores evidence as text in PostgreSQL. Sign-in and roles, claim versioning and a full audit log are not built yet. What each of those would look like is below.
 
 ## What I would do next
 
