@@ -41,6 +41,42 @@ pnpm test                                        # unit tests
 createdb evidence_gate_test && pnpm test:e2e     # HTTP + PostgreSQL, model API faked
 ```
 
+## Commands
+
+Run from the repository root.
+
+| Command | What it does |
+|---|---|
+| `pnpm install` | Install both packages and generate the database client |
+| `pnpm dev` | Start the API and the UI together in one terminal |
+| `pnpm dev:backend` | API only, restarts on change: http://localhost:3000 |
+| `pnpm dev:web` | UI only: http://localhost:5173, forwards `/api` to the API |
+| `curl http://localhost:3000/api/health` | Check the API is up; returns `{"status":"ok"}` |
+| `pnpm --filter backend exec prisma migrate deploy` | Apply existing migrations to the database in `DATABASE_URL` |
+| `pnpm --filter backend db:migrate` | After editing `schema.prisma`: create and apply a new migration |
+| `pnpm --filter backend db:seed` | Insert, or reset, the example claim |
+| `pnpm --filter backend prisma:generate` | Regenerate the database client (also runs on install) |
+| `pnpm test` | Unit tests; no database or API key needed |
+| `pnpm test:e2e` | End-to-end tests against `evidence_gate_test`; create it once with `createdb evidence_gate_test` |
+| `pnpm --filter backend typecheck` | Type-check the API |
+| `pnpm --filter web typecheck` | Type-check the UI |
+| `pnpm build` | Production build of both packages |
+| `pnpm --filter backend start` | Run the built API from `backend/dist` |
+| `pnpm --filter web preview` | Serve the built UI locally: http://localhost:4173 |
+| `psql -d evidence_gate -f docs/queries.sql` | Inspect the data and check the audit invariants (below) |
+
+### Configuration
+
+Settings live in `backend/.env`, copied from `backend/.env.example`:
+
+- `DATABASE_URL`: the PostgreSQL connection string.
+- The model API key (second line of `.env.example`). Required: the API refuses to start without it.
+- Optional: `PORT` (API port, default `3000`), `WEB_ORIGIN` (allowed browser origins, comma-separated, default `http://localhost:5173`), `TEST_DATABASE_URL` (end-to-end test database, default `DATABASE_URL` with `_test` appended).
+
+### Inspecting the database
+
+[`docs/queries.sql`](docs/queries.sql) holds read-only queries for each feature: claims, run provenance, the latest run's assertions with the exact passage each quote matched, where the pipeline overrode the model, decisions, evidence integrity and spend. Its invariant section must return zero rows; a row there means an audit record is inconsistent. Run the whole file with the command above, or paste single queries into psql or pgAdmin.
+
 ## Production design
 
 ![High-level design](HLD.drawio.png)
