@@ -22,6 +22,7 @@ describe('applyQuoteVerification', () => {
     expect(result.verdict).toBe('SUPPORTED');
     expect(result.quoteVerified).toBe(true);
     expect(result.matchedAt).toBe(EVIDENCE.indexOf('achieved a sensitivity'));
+    expect(result.matchedLength).toBe('achieved a sensitivity of 96.4%'.length);
   });
 
   it('keeps a PARTIAL verdict when its quote is verified', () => {
@@ -38,6 +39,7 @@ describe('applyQuoteVerification', () => {
     expect(result.verdict).toBe('UNSUPPORTED');
     expect(result.quoteVerified).toBe(false);
     expect(result.matchedAt).toBeNull();
+    expect(result.matchedLength).toBeNull();
     // The model's own confidence is kept for the record, not used for the decision.
     expect(result.confidence).toBe(100);
   });

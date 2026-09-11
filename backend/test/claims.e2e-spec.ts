@@ -162,9 +162,20 @@ describe('Claims API (e2e)', () => {
       expect(run.rawResponse.id).toBe('msg_e2e');
       expect(run.assertions).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ verdict: 'PARTIAL', quoteVerified: true }),
+          expect.objectContaining({
+            verdict: 'PARTIAL',
+            quoteVerified: true,
+            matchedAt: EVIDENCE.indexOf('For AF episodes lasting'),
+            // Source wraps a line mid-quote; the span still covers exactly the passage.
+            matchedLength: ASSERTIONS[0].quotedExcerpt.length,
+          }),
           // The model said SUPPORTED; its quote does not exist, so the pipeline overrode it.
-          expect.objectContaining({ verdict: 'UNSUPPORTED', quoteVerified: false, matchedAt: null }),
+          expect.objectContaining({
+            verdict: 'UNSUPPORTED',
+            quoteVerified: false,
+            matchedAt: null,
+            matchedLength: null,
+          }),
         ]),
       );
       // The whole evidence text was sent to the model.

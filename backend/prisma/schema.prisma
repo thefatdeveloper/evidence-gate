@@ -54,6 +54,7 @@ model Assertion {
   quotedExcerpt String
   quoteVerified Boolean       @default(false)
   matchedAt     Int? // index into evidenceText, null when unverified
+  matchedLength Int? // length of the matched passage in evidenceText, null when unverified
   createdAt     DateTime      @default(now())
 }
 

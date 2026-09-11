@@ -10,6 +10,8 @@ export interface VerifiedAssertion {
   quotedExcerpt: string;
   quoteVerified: boolean;
   matchedAt: number | null;
+  /** evidenceText.slice(matchedAt, matchedAt + matchedLength) is the passage to highlight. */
+  matchedLength: number | null;
 }
 
 /**
@@ -22,7 +24,10 @@ export function applyQuoteVerification(
   evidenceText: string,
 ): VerifiedAssertion[] {
   return assertions.map((assertion) => {
-    const { verified, matchedAt } = verifyQuote(assertion.quotedExcerpt, evidenceText);
+    const { verified, matchedAt, matchedLength } = verifyQuote(
+      assertion.quotedExcerpt,
+      evidenceText,
+    );
     return {
       text: assertion.text,
       verdict: verified ? assertion.verdict : 'UNSUPPORTED',
@@ -31,6 +36,7 @@ export function applyQuoteVerification(
       quotedExcerpt: assertion.quotedExcerpt,
       quoteVerified: verified,
       matchedAt,
+      matchedLength,
     };
   });
 }
