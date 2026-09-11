@@ -11,6 +11,12 @@ export interface QuoteVerification {
   verified: boolean;
   /** Index into the ORIGINAL sourceText where the match starts; null if unverified. */
   matchedAt: number | null;
+  /**
+   * Length of the matched passage in the ORIGINAL sourceText; null if unverified.
+   * Can differ from the quote's length when whitespace was reformatted, so
+   * sourceText.slice(matchedAt, matchedAt + matchedLength) is the real passage.
+   */
+  matchedLength: number | null;
   normalizedQuote: string;
 }
 
@@ -119,7 +125,12 @@ function endsOnBoundary(source: string, end: number, quote: string): boolean {
 
 export function verifyQuote(quotedExcerpt: string, sourceText: string): QuoteVerification {
   const quote = normalizeForMatch(quotedExcerpt);
-  const unverified: QuoteVerification = { verified: false, matchedAt: null, normalizedQuote: quote };
+  const unverified: QuoteVerification = {
+    verified: false,
+    matchedAt: null,
+    matchedLength: null,
+    normalizedQuote: quote,
+  };
   if (quote.length === 0) return unverified;
 
   const source = normalizeWithMap(sourceText);
@@ -134,7 +145,18 @@ export function verifyQuote(quotedExcerpt: string, sourceText: string): QuoteVer
       startsOnBoundary(source.text, at, quote) &&
       endsOnBoundary(source.text, at + quote.length, quote)
     ) {
-      return { verified: true, matchedAt: source.map[at], normalizedQuote: quote };
+      const matchedAt = source.map[at];
+      // The quote is trimmed, so its last character is real content, never a
+      // collapsed space. End the passage after that original character, which
+      // may be two code units long (e.g. a mathematical symbol outside the BMP).
+      const lastStart = source.map[at + quote.length - 1];
+      const lastLength = sourceText.codePointAt(lastStart)! > 0xffff ? 2 : 1;
+      return {
+        verified: true,
+        matchedAt,
+        matchedLength: lastStart + lastLength - matchedAt,
+        normalizedQuote: quote,
+      };
     }
   }
 

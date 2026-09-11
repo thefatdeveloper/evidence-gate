@@ -21,6 +21,7 @@ model Claim {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   runs         AssessmentRun[]
+  decisions    Decision[]
 }
 
 model AssessmentRun {
@@ -39,6 +40,7 @@ model AssessmentRun {
   rawResponse    Json? // the unedited model response
   createdAt      DateTime    @default(now())
   assertions     Assertion[]
+  decisions      Decision[]
 }
 
 model Assertion {
@@ -52,5 +54,19 @@ model Assertion {
   quotedExcerpt String
   quoteVerified Boolean       @default(false)
   matchedAt     Int? // index into evidenceText, null when unverified
+  createdAt     DateTime      @default(now())
+}
+
+// A human sign-off. Append-only history, like runs: a later decision never
+// overwrites an earlier one. runId records exactly which assessment was signed off.
+model Decision {
+  id            String        @id @default(uuid())
+  claimId       String
+  claim         Claim         @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  runId         String
+  // NoAction: a run that has been signed off cannot be deleted on its own.
+  run           AssessmentRun @relation(fields: [runId], references: [id], onDelete: NoAction)
+  outcome       String // APPROVED | SENT_BACK
+  justification String
   createdAt     DateTime      @default(now())
 }

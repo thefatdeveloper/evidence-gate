@@ -13,6 +13,7 @@ describe('verifyQuote', () => {
 
     expect(result.verified).toBe(true);
     expect(result.matchedAt).toBe(SOURCE.indexOf(quote));
+    expect(result.matchedLength).toBe(quote.length);
   });
 
   it('verifies a quote whose whitespace was reformatted (line breaks, double spaces)', () => {
@@ -22,6 +23,8 @@ describe('verifyQuote', () => {
     expect(result.verified).toBe(true);
     // Source wraps after "algorithm"; the index still points at the real passage.
     expect(result.matchedAt).toBe(SOURCE.indexOf('the patch algorithm'));
+    // The highlighted span is the source's own text, line break included.
+    expect(highlight(SOURCE, result)).toBe('the patch algorithm\nachieved a sensitivity of 96.4%');
     expect(result.normalizedQuote).toBe('the patch algorithm achieved a sensitivity of 96.4%');
   });
 
@@ -29,7 +32,7 @@ describe('verifyQuote', () => {
     const result = verifyQuote(`described the patch as "comfortable" and 'easy to forget'`, SOURCE);
 
     expect(result.verified).toBe(true);
-    expect(result.matchedAt).toBe(SOURCE.indexOf('described the patch'));
+    expect(highlight(SOURCE, result)).toBe('described the patch as “comfortable” and ‘easy to forget’');
   });
 
   it('verifies smart quotes in the quote against straight quotes in the source', () => {
@@ -54,6 +57,7 @@ describe('verifyQuote', () => {
     expect(result).toEqual({
       verified: false,
       matchedAt: null,
+      matchedLength: null,
       normalizedQuote: 'the device was cleared by the fda for home use',
     });
   });
@@ -65,6 +69,7 @@ describe('verifyQuote', () => {
     expect(verifyQuote(quote, SOURCE)).toEqual({
       verified: false,
       matchedAt: null,
+      matchedLength: null,
       normalizedQuote: '',
     });
   });
@@ -74,6 +79,7 @@ describe('verifyQuote', () => {
 
     expect(result.verified).toBe(false);
     expect(result.matchedAt).toBeNull();
+    expect(result.matchedLength).toBeNull();
   });
 
   describe('number boundaries', () => {
@@ -99,6 +105,7 @@ describe('verifyQuote', () => {
 
       expect(result.verified).toBe(true);
       expect(result.matchedAt).toBe(source.indexOf(' 6.4%') + 1);
+      expect(highlight(source, result)).toBe('6.4%');
     });
   });
 
@@ -107,6 +114,24 @@ describe('verifyQuote', () => {
     const result = verifyQuote('Sensitivity of 96.4% was met', source);
 
     expect(result.verified).toBe(true);
-    expect(source.slice(result.matchedAt!)).toMatch(/^sensitivity\s+of\s+96\.4%\s+was met/);
+    // Span covers the source's own spacing and ends exactly at "met" — no trailing whitespace.
+    expect(highlight(source, result)).toBe('sensitivity   of\n96.4%   was met');
+  });
+
+  it('includes the whole final character when it is outside the BMP (two code units)', () => {
+    // U+1D6FC MATHEMATICAL ITALIC SMALL ALPHA, as it appears in some typeset PDFs.
+    const source = 'Internal consistency was high (Cronbach 𝛼) across sites.';
+    const result = verifyQuote('consistency was high (Cronbach 𝛼', source);
+
+    expect(result.verified).toBe(true);
+    expect(highlight(source, result)).toBe('consistency was high (Cronbach 𝛼');
   });
 });
+
+/** The passage a UI would highlight: sourceText.slice(matchedAt, matchedAt + matchedLength). */
+function highlight(source: string, result: ReturnType<typeof verifyQuote>): string {
+  if (result.matchedAt === null || result.matchedLength === null) {
+    throw new Error('expected a verified match');
+  }
+  return source.slice(result.matchedAt, result.matchedAt + result.matchedLength);
+}

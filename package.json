@@ -9,6 +9,7 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
     "test": "pnpm --filter backend test",
+    "test:e2e": "pnpm --filter backend test:e2e",
     "dev:backend": "pnpm --filter backend dev",
     "dev:web": "pnpm --filter web dev"
   }
