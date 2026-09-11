@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Generated Prisma client (rebuilt by `prisma generate` on install)
+backend/src/generated/
+
+# Environment / secrets (commit .env.example only)
+.env
+.env.*
+!.env.example
+*.local
+
+# OS
+.DS_Store

@@ -1,0 +1,56 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+// Connection URL lives in prisma.config.ts (Prisma 7).
+datasource db {
+  provider = "postgresql"
+}
+
+model Claim {
+  id           String          @id @default(uuid())
+  productRef   String
+  claimText    String
+  market       String
+  status       String          @default("DRAFTED")
+  // DRAFTED | ASSESSED | APPROVED | SENT_BACK
+  evidenceText String // the clinical study text
+  evidenceHash String // sha256 of evidenceText at assessment time
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  runs         AssessmentRun[]
+}
+
+model AssessmentRun {
+  id             String      @id @default(uuid())
+  claimId        String
+  claim          Claim       @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  modelId        String // exact string, e.g. claude-sonnet-4-5-20250929 — never an alias
+  promptVersion  String // hand-bumped label, e.g. v1.2.0
+  promptHash     String // sha256 of the fully rendered prompt actually sent
+  temperature    Float
+  maxTokens      Int
+  overallVerdict String // SUBSTANTIATED | PARTIAL | NOT_SUBSTANTIATED
+  latencyMs      Int
+  inputTokens    Int?
+  outputTokens   Int?
+  rawResponse    Json? // the unedited model response
+  createdAt      DateTime    @default(now())
+  assertions     Assertion[]
+}
+
+model Assertion {
+  id            String        @id @default(uuid())
+  runId         String
+  run           AssessmentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  text          String
+  verdict       String // SUPPORTED | PARTIAL | UNSUPPORTED
+  confidence    Int
+  rationale     String
+  quotedExcerpt String
+  quoteVerified Boolean       @default(false)
+  matchedAt     Int? // index into evidenceText, null when unverified
+  createdAt     DateTime      @default(now())
+}

@@ -1,0 +1,15 @@
+{
+  "name": "evidence-gate",
+  "private": true,
+  "packageManager": "pnpm@10.19.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter backend test",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:web": "pnpm --filter web dev"
+  }
+}
