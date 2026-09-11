@@ -2,11 +2,7 @@
 
 Checks a product marketing claim against the evidence behind it, verifies every quote the model cites against the source text, and puts human sign-off behind a governance gate.
 
-<!--
-  Screenshot placeholder. Assess the example claim, save the results view as
-  docs/screenshot.png, then replace this comment with:
-  ![Evidence Gate: an assessed claim with one assertion flagged "Quote not found in source"](docs/screenshot.png)
--->
+![Evidence Gate: an assessed claim with verified quotes](docs/screenshot.png)
 
 ## What it does
 
